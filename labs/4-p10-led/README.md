@@ -119,6 +119,38 @@ As well as the RX DMA's TI:
 - `PERMAP(7)`: wire the `dreq` from SPI0 RX to this DMA engine.
 - `WAIT_RESP`: Doesn't really matter but I kept it.
 
+Hardware providing `dreq` usually has configuration options that determine when it should yell at the DMA for more data or take it away. In our case, the SPI hardware provided a few more DMA-related config options in addition to that. For the purpose of this lab, look through and set the following appropriately. Details can be found on p.153 of the peripheral manual.
+- `DMAEN` in `CS`: enable DMA mode.
+- `TA` in `CS`: transfer active; should be set right before starting DMA data transfer into the FIFO.
+- `DLEN` register: we are not used to setting this since normal SPI operation does not require it, but DMA wants it.
+- `DC` register: thresholds for `dreq`, but reset defaults should just work.
+
+Zooming out a bit, the whole picture of the DMA driver is roughly:
+```
+// ARM code:
+Set up DMA blocks, init SPI.
+Start RX draining DMA (looping back to self).
+Start driving DMA.
+
+// Driving DMA blocks:
+let group = 0;
+while True:
+  gpioset(A/B, group)
+  Load framebuffer address for the group to the DMA transfer block
+  Check SPI, ensure transfer active
+  DMA transfer block copies a group out
+  gpioset(SCLK, high);
+  delay(a bit);
+  gpioset(SCLK, low);
+  gpioset(OE, high);
+  delay(a bit);
+  gpioset(OE, low);
+  add(group, group, 1);
+  mod(group, group, 4);
+```
+
+Once this runs, the two DMA engines of your choice should stay running on their own, and finally you can use the CPU for something more interesting.
+
 ## Final deliverable & extensions
 The final deliverable of this lab is a driver that can drive the P10 display, and can bang out from a framebuffer with **zero CPU intervention**. The work on the CPU side is then very straightforward: fill the framebuffer according to the scan pattern, and the DMA engine will take it from there.
 
