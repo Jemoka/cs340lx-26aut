@@ -103,6 +103,22 @@ To take this a step further, we can abuse the Pi's DMA engine (since they are Tu
 
 (Note: the core spirit of this lab is actually the single line above, and the rest is kinda busy work...)
 
+## More on the DMA approach
+This is a continuation of the [DMA lab](https://github.com/dddrrreee/cs240lx-26spr/tree/main/labs/17-dma) from 240lx, where you built the `blinky` program that demonstrates `arithmetic`, `gpio`, `loops`, and `conditions`. These building blocks are enough for handling the group switching, latching, and OE logic - implement the C code you had for driving these logics according to the pseudocode above, and this part should look a bit like a fancier version of the `blinky` you built for 240lx.
+
+Something we did not cover before is using DMA for filling/popping peripherals' FIFOs, which in our case, will be DMAing innout the SPI FIFOs.
+Some important flags to set for the TX DMA block's TI & why:
+- `SRC_INC`: we want the source address to be incrementing so that you go over the whole buffer rather than a specific location.
+- `DEST_DREQ`: wait for destination `dreq` signal (more on it later, basically "FIFO has space").
+- `PERMAP(6)`: wire the `dreq` from SPI0 TX to this DMA engine.
+- `WAIT_RESP`: wait for write response before sending next, to ensure we don't overflow the FIFO.
+
+As well as the RX DMA's TI:
+- `DEST_IGNORE`: Do not actually write into the dest.
+- `SRC_DREQ`: Same as above, "FIFO has data."
+- `PERMAP(7)`: wire the `dreq` from SPI0 RX to this DMA engine.
+- `WAIT_RESP`: Doesn't really matter but I kept it.
+
 ## Final deliverable & extensions
 The final deliverable of this lab is a driver that can drive the P10 display, and can bang out from a framebuffer with **zero CPU intervention**. The work on the CPU side is then very straightforward: fill the framebuffer according to the scan pattern, and the DMA engine will take it from there.
 
