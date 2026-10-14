@@ -389,11 +389,11 @@ It is at this point that we pause and ask a consequential question: what *is* mu
 
 And today? My answer is:
 
-$$x\qty(t) = \sin \qty(2\pi ft)$$
+$$x(t) = \sin (2\pi ft)$$
 
 This is a sine wave! Its the most basic type of bleep bloop we can make in bleep bloop land. However, its worthwhile to mention that computers can only do discrete math, so we chop this bleep bloop up into pieces:
 
-$$x[n] = \sin \qty(2\pi f \frac{n}{f_{s}})$$
+$$x[n] = \sin (2\pi f \frac{n}{f_{s}})$$
 
 where $f_s$ is the sample rate (48kHz from this lab) and $n$ is the sample ID. At this point, after witnessing the glory of the above equation, you may have three questions:
 
@@ -449,23 +449,57 @@ fn f32_to_pcm32(sample: f32) -> u32 {
 ```
 
 # Some Synths
-At this point I leave you with a series of formulas to taste:
+At this point I leave you with a series of formulas to taste. One common pattern for making one of these things is using what's called a Phase Accumulator. Specifically, its a thingamajigger that goes from -1 to 1 and then wraps around, like:
+
+```
+-1 ... -0.5 ... 0 ... 0.5 ... 1,-1, ... 0.5...
+```
+
+More formally, let's define:
+
+$$p_{f_s, f}[n] = 2\text{frac}\left(\frac{f \cdot n }{f_s}) - 1$$ 
+
+where $f_s$ is the sampling frequency (here 48kHz for us), $f$ the desired playback frequency, and $\text{frac}=x-\text{floor}(x)$ which is just the fractional part. You should understand this as just doing the wrapping math above, but using Mathematics. What I did is the following, which you can use or leave
+
+```rust
+// make the sample
+let sample = self.synth.synthesize(self.phase);
+
+// the phase accumulation part
+self.phase += self.frequency / self.sample_rate.to_config().value;
+if self.phase >= 1.0 {
+    self.phase -= 1.0;
+}
+self.phase = self.phase % 1.0;
+```
+
+Armed with this, we present various things like sound like things, along with artist's interpretation of what it sounds like.
 
 ## Triangle Waves
+Oooooo
 
-$$x[n] = 4 \cdot \left| \frac{n}{f_s} - 0.5 \right| - 1$$
+$$x[n] = 2 | q[n] | -1$$
 
 ## Saw Waves
+Bzzzzz
 
-$$x[n] = 2 \cdot \frac{n}{f_s} - 1$$
+$$x[n] = p[n]$$
 
 ## Square Waves
+Meeeee
 
-$$x[n] = \begin{cases} 1 & \text{if } \frac{n}{f_s} < 0.5 \\ -1 & \text{otherwise} \end{cases}$$
+$$x[n] = \begin{cases} 1 & \text{if } q[n] < 0 \\ -1 & \text{otherwise} \end{cases}$$
 
 ## Sine Waves
+Duuuuu
 
 $$x[n] = \sin \left( 2\pi f \frac{n}{f_s} \right)$$
 
 # Extensions
-DO A PULL IF YOU SEE THIS. EQ and stuff... probably.
+- minor - Adders! Add two frequencies together.
+- minor - A song! Look up 12-tone to frequency mapping and make actual music.
+- [minor/major] - LFOs: a single frequency is not fun, use a low frequency oscillator to parameterize a new sound 
+- major - Attack-Decay-Sustain-Release: a single tone is boring, automating (manipulating) the volume can bring timbre that sounds like real instruments
+
+But everybody should be getting a major extension anyways because its daniel mode horray!
+
