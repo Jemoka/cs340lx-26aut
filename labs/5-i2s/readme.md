@@ -468,7 +468,7 @@ At this point I leave you with a series of formulas to taste. One common pattern
 
 More formally, let's define:
 
-$$p_{f_s, f}[n] = \text{frac}\left(\frac{f \cdot n }{f_s})$$ 
+$$p_{f_s, f}[n] = \text{frac}\left(\frac{f \cdot n }{f_s}\right)$$ 
 
 where $f_s$ is the sampling frequency (here 48kHz for us), $f$ the desired playback frequency, and $\text{frac}=x-\text{floor}(x)$ which is just the fractional part. You should understand this as just doing the wrapping math above, but using Mathematics. What I did is the following, which you can use or leave
 
