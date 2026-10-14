@@ -79,7 +79,7 @@ By reading the BCM figure it actually gives us a pretty good idea of some things
 > Notice FLEN sets the frame length to (FLEN+1) clocks! and **HINT**: `CH1POS` should not be 0, and `CH2POS` should not be 32.
 
 ### Clock Inversion
-`CLKI` in `MODE_A` has two modes: 0 - outputs change on rising edge; 1 - outputs change on falling edge. Astute examination of Figure 14 in PCM5102 will create the revelation that MSB of the DATA line starts clocking out on the **falling edge**. So you should probably turn `CLKI` on.
+`CLKI` in `MODE_A` has two modes: 0 - outputs change on rising edge; 1 - outputs change on falling edge. Astute examination of Figure 15 in PCM5102 will create the revelation that MSB of the DATA line starts clocking out on the **falling edge**. So you should probably turn `CLKI` on.
 
 Thus we want to set `CLKI=1`
 
@@ -226,7 +226,7 @@ You should then put some stuff into the FIFO and plug in headphone.
 If you are unsure of what to play, might I recommend the following simple square wave? In Rust pseudocode, it looks like:
 
 ```rust
-for i in 0u32...48000 {
+for i in 0u32..48000 {
     let sample: i32 = if (i * 440) % 48_000 < 24_000 {
         1 << 28
     } else {
@@ -272,7 +272,7 @@ I'm going to be significantly less hand-holdy in this part assuming that you hav
 You should be copying from wherever you fancy some audio to `FIFO_A` of i2s. Remember to convert physical address to bus address.... On the i2s side, some more fun must be also had by telling the system how much to DREQ:
 
 - `DMAEN`: enable DREQ signals `CS_A`
-- `TX`: how many bits before asking for more data (hint, its 32, how big the FIFO is) `DREQ_A`
+- `TX`: how many FIFO entries before asking for more data (hint, its 32, how big the FIFO is) `DREQ_A`
 
 ----------------------------------------------------------------------
 ## Task 6: Ringbuffer
@@ -352,8 +352,8 @@ assert!((self.head + 1) % BUFFER_COUNT != self.tail, "I2S ring is full")
 
 // write the main buffer
 self.buffers[self.head].fill(INPUT)
-self.blocks[slot].tx_len = len(INPUT)
-self.write = (slot + 1) % BUFFER_COUNT;
+self.blocks[self.head].tx_len = len(INPUT)
+self.head = (self.head + 1) % BUFFER_COUNT;
 
 // write then in the block right after silence
 self.buffers[self.write].fill(SILENCE);
