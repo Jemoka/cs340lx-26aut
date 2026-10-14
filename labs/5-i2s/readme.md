@@ -119,21 +119,23 @@ We are going to be **master** today[^2]. This also means we have to generate a c
 There are two PCM/I2S clock control registers. To figure out what should go in these registers, see page 105 in BCM2835-Peripherals for MASH math. 
 
 #### CM_PCM_CTRL @ 0x7E101098
+- Bits 31:24 = **you have to put the value 0x5A here**[^3]
+- Bit 10:9 = MASH selection; should be 1; 0 = integer, 1/2/3 = noise-shaping stages; minimum DIVI = 1/2/3/5.
 - Bit 5 = Emergency Stop; should be 0; debugging only
 - Bit 4 = Clock Enable
 - Bits 3:0 = Clock Source
 
 For CLOCK SOURCE; two choices:
 
-- OSC (SRC=0b0001) is cool and allegedly good, but it runs on 19.2MHz which won't work for us if you do the mathematics outlined below
+- OSC (SRC=0b0001) is cool and allegedly good, and I think Tianle used it and it worked fine for him, but I forgot why I ended up using the much faster clock below
 - PLLD (SRC=0b0110) which runs at a 500MHz nominal, which we will use today
 
 #### CM_PCM_DIV @ 0x7E10109C
 The divider is split between an integer divider and a fractional (mashing) divider (see the mathematics below to understand). 
 
 - Bits 31:24 = **you have to put the value 0x5A here**[^3]
-- Bits 23:12 = the integer divider.
-- Bits 11:0 = the mashing divider.
+- Bits 23:12 = DIVI, the integer divider.
+- Bits 11:0 = DIVF, the mashing divider.
 
 ### I hate math
 For the mathematically inept, including myself, I have what worked for me here. We have 32 bits per slot and two channels (64 BCK cycle per stereo frame), crispy audio at 48kHz breaks down as:
