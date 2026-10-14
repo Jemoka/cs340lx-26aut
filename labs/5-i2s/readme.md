@@ -449,15 +449,15 @@ fn f32_to_pcm32(sample: f32) -> u32 {
 ```
 
 # Some Synths
-At this point I leave you with a series of formulas to taste. One common pattern for making one of these things is using what's called a Phase Accumulator. Specifically, its a thingamajigger that goes from -1 to 1 and then wraps around, like:
+At this point I leave you with a series of formulas to taste. One common pattern for making one of these things is using what's called a Phase Accumulator. Specifically, its a thingamajigger that goes from 0 to 1 and then wraps around, like:
 
 ```
--1 ... -0.5 ... 0 ... 0.5 ... 1,-1, ... 0.5...
+0 ... 0.5 ... 1,0, ... 0.5...
 ```
 
 More formally, let's define:
 
-$$p_{f_s, f}[n] = 2\text{frac}\left(\frac{f \cdot n }{f_s}) - 1$$ 
+$$p_{f_s, f}[n] = \text{frac}\left(\frac{f \cdot n }{f_s})$$ 
 
 where $f_s$ is the sampling frequency (here 48kHz for us), $f$ the desired playback frequency, and $\text{frac}=x-\text{floor}(x)$ which is just the fractional part. You should understand this as just doing the wrapping math above, but using Mathematics. What I did is the following, which you can use or leave
 
@@ -478,22 +478,22 @@ Armed with this, we present various things like sound like things, along with ar
 ## Triangle Waves
 Oooooo
 
-$$x[n] = 2 | q[n] | -1$$
+$$x[n] = 4 | p[n] -0.5 | -1$$
 
 ## Saw Waves
 Bzzzzz
 
-$$x[n] = p[n]$$
+$$x[n] = 2 p[n] - 1$$
 
 ## Square Waves
 Meeeee
 
-$$x[n] = \begin{cases} 1 & \text{if } q[n] < 0 \\ -1 & \text{otherwise} \end{cases}$$
+$$x[n] = \begin{cases} 1 & \text{if } p[n] < 0.5 \\ -1 & \text{otherwise} \end{cases}$$
 
 ## Sine Waves
 Duuuuu
 
-$$x[n] = \sin \left( 2\pi f \frac{n}{f_s} \right)$$
+$$x[n] = \sin \left( 2\pi p[n] \right)$$
 
 # Extensions
 - minor - Adders! Add two frequencies together.
