@@ -433,7 +433,7 @@ vmsr fpexc, r0
 @ set the floating point status and control register (FPSCR) to a known state
 @ RunFast: FZ [24] flushes tiny values to zero; DN [25] selects default NaNs.
 @ ARM1176 p. 20-15. 
-@ The robots pointed out above that whenever sin computation goes to Na enabling the
+@ The robots pointed out above that whenever sin computation goes to Nan enabling the
 @ RunFast bits we don't have to manually handle exceptions regarding floating point nans.
 mov r0, #(3 << 24)
 vmsr fpscr, r0
