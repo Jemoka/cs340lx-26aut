@@ -395,9 +395,9 @@ $$x(t) = \sin (2\pi ft)$$
 
 This is a sine wave! Its the most basic type of bleep bloop we can make in bleep bloop land. However, its worthwhile to mention that computers can only do discrete math, so we chop this bleep bloop up into pieces:
 
-$$x[n] = \sin (2\pi f \frac{n}{f_{s}})$$
+$$x[n] = \sin \left(2\pi f \frac{n}{f_{s}}\right)$$
 
-where $f_s$ is the sample rate (48kHz from this lab) and $n$ is the sample ID. At this point, after witnessing the glory of the above equation, you may have three questions:
+where $f_s$ is the sample rate (48kHz from this lab) $n$ is the sample index, and $f$ is the frequency you'd like to generate. At this point, after witnessing the glory of the above equation, you may have four questions:
 
 1. How tf do I even *do* floating point math?
 2. How tf do I compute `sin`?
