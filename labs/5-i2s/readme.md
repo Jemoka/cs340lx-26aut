@@ -26,9 +26,9 @@ Audio is banged out a block at a time to i2s, often in 32 bits at a time. We are
 ^channel 1     ^channel 2
 ```
 
-That is, we will have 64 bits a frame, and 32 bits per channel packed back to back. We would call a "frame" the entire thing above of 64 bits, syncing every 32 bits. Now, there's a tricky bit of figure in PCM5122 which you should know about:
+That is, we will have 64 bits a frame, and 32 bits per channel packed back to back. We would call a "frame" the entire thing above of 64 bits, syncing every 32 bits. Now, there's a tricky bit of figure in PCM5102 which you should know about (page 14, figure 15):
 
-![PCM5122, page 16, Figure 14](./docs/pictooors/i2s_right_justified.png)
+![PCM5102, page 14, Figure 15](./docs/pictooors/i2s_right_justified.png)
 
 > [!IMPORTANT]
 > i2s audio from our DAC is **falling-edge aligned** This means that the MSB of the DATA word for a given frame is ONE `PCM_CLK` (aka `BCK`) to the right of when the `PCM_FS` clock shifted. In other words, we actually switch channels one clock cycle after the `PCM_FS` shifts. This fact will be useful shortly.
@@ -38,7 +38,7 @@ Now, please pull out `BCM2835-ARM-Peripherals` and navigate to pp119. At this ju
 
 ![BCM2835-ARM-Peripherals, page 119, figure 8-1](./docs/pictooors/i2s.png)
 
-What a great pictoor. What do we see? We see four pins, three of which is relevant for us at the moment.
+What a great picture. What do we see? We see four pins, three of which is relevant for us at the moment.
 
 - `PCM_CLK`: a good ol' clock, this clocks each bit in `PCM_DIN` and `PCM_DOUT`
 - `PCM_FS`: "frame sync" a much longer clock, this clocks in the left and right channels, syncs a "frame"
@@ -56,14 +56,14 @@ Each of these *pins* correspond to an actual GPIO pin in your computor. Specific
 
 ## Task 1: i2s Setup
 - **Task**: set up an i2s frame using conventions.
-- **Goal**: make the BCM bang out i2s frames that agree with what the PCM5122 is looking for.
+- **Goal**: make the BCM bang out i2s frames that agree with what the PCM5102 is looking for.
 - **Behavior**: hunt down and set a bunch of registers
 - **Document**: BCM2835-ARM-Peripherals, pp125
 
 Let's set up i2S. Every[^1] i2s register is named `something_A`, which implies that there's a `something_B`, except there isn't because Broadcom is a paper products company that happens to write datasheets. I'm therefore going to refer to everything with their proper `*_A` names and this does not mean you should look for a `_B`. 
 
 > [!TIP]
-> I would pull out `BCM2835-ARM-Peripherals` and plaster figure `8-1` (page 119) somewhere. On the side, I would pull out PCM5122 data sheet and plaster figure `14` (page 16) somewhere else. These are the two things we want to make agree.
+> I would pull out `BCM2835-ARM-Peripherals` and plaster figure `8-1` (page 119) somewhere. On the side, I would pull out PCM5102 data sheet and plaster figure `14` (page 16) somewhere else. These are the two things we want to make agree.
 
 ### The "Obvious Things", for transmission
 By reading the BCM figure it actually gives us a pretty good idea of some things we need to configure. Combine this to taste with the frame description above to figure what you need to put where.
@@ -79,7 +79,7 @@ By reading the BCM figure it actually gives us a pretty good idea of some things
 > Notice FLEN sets the frame length to (FLEN+1) clocks! and **HINT**: `CH1POS` should not be 0, and `CH2POS` should not be 32.
 
 ### Clock Inversion
-`CLKI` in `MODE_A` has two modes: 0 - outputs change on rising edge; 1 - outputs change on falling edge. Astute examination of Figure 14 in PCM5122 will create the revelation that MSB of the DATA line starts clocking out on the **falling edge**. So you should probably turn `CLKI` on.
+`CLKI` in `MODE_A` has two modes: 0 - outputs change on rising edge; 1 - outputs change on falling edge. Astute examination of Figure 14 in PCM5102 will create the revelation that MSB of the DATA line starts clocking out on the **falling edge**. So you should probably turn `CLKI` on.
 
 Thus we want to set `CLKI=1`
 
@@ -332,7 +332,7 @@ Don't worry, I[^6] gotchu:
     DmaAll = 28,
 ```
 
-After setting up the IRQ mapping and enablement (remember to turn on IRQs at all, and also turn on the DMA channel you are using's specific IRQ), you will notice that your IRQs are STILL not firing! This is because you've got one thing left before you are done. Going back to your transfer blocks, in bit 0 of of `IT`, you will find `INTERN` (BCM2835 pp52), which enables actual interurpts which the block finishes.
+After setting up the IRQ mapping and enablement (remember to turn on IRQs at all, and also turn on the DMA channel you are using's specific IRQ), you will notice that your IRQs are STILL not firing! This is because you've got one thing left before you are done. Going back to your transfer blocks, in bit 0 of of `TI`, you will find `INTEN` (BCM2835 pp52), which enables actual interurpts which the block finishes.
 
 Once the IRQ fires, you will have to set `INT` on the DMA `CS` register to clear it (as with others, its set to clear), and---optionally---turn off DMA when your Ringbuffer is fully played.
 
@@ -346,7 +346,7 @@ You can try to make it fast, or you can do another streetfighting trick[^5]. Spe
 
 ```rust
 // backpressure as needded
-assert!((self.write + 1) % BUFFER_COUNT != self.written, "I2S ring is full")
+assert!((self.head + 1) % BUFFER_COUNT != self.tail, "I2S ring is full")
 
 // write the main buffer
 self.buffers[self.head].fill(INPUT)
@@ -366,6 +366,17 @@ self.blocks[self.write].tx_len = len(SILENCE)
 [^6]: [more like your buddy Linus](https://github.com/raspberrypi/linux/blob/rpi-6.6.y/arch/arm/boot/dts/broadcom/bcm2835-common.dtsi)
 
 At this point, look ma' no gaps! (hopefully)
+
+### There's a race
+*Technically*, there's a data race in this design when the following things happen:
+
+1. you play some audio (yipeee)
+2. your DMA catches up to the head pointer
+3. IRQ *delayed*, and then your DMA starts to read the empty gap buffer
+4. you decide, at this very moment, to play some more audio
+5. DMA is then trying to copy the silence while you are trying to overwrite it (decidedly less yipee)
+
+The solution is to either pause the DMA while handling IRQ (this makes gaps), or writes silences proactively, or time the DMA block before the silence a bit, or add more gaps, etc., but for now I haven't actually ran into this so its mostly ok.
 
 ----------------------------------------------------------------------
 ## Task 7: Make an Actual Sound
