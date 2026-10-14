@@ -412,26 +412,29 @@ We will have to enable the CP10 and CP11 floating point co-processors in order t
 As a reward for suffering through the rest of this lab, here's what I did during boot to enable floats:
 
 ```asm
-// floats!
-// first, enable user and super mode access to CP10 and CP11 coprocessors,
-// which are the VFPv2 registers.
-// CP10 [21:20], CP11 [23:22] = 0b11: User + privileged access, ARM1176 p. 3-51, 3-52.
+@ floats!
+@ first, enable user and super mode access to CP10 and CP11 coprocessors,
+@ which are the VFPv2 registers.
+@ CP10 [21:20], CP11 [23:22] = 0b11: User + privileged access, ARM1176 p. 3-51, 3-52.
 mrc p15, 0, r0, c1, c0, 2
 orr r0, r0, #(0xf << 20)
 mcr p15, 0, r0, c1, c0, 2
-// Prefetch flush
+
+@ Prefetch flush
 mov r0, #0
 mcr p15, 0, r0, c7, c5, 4
-// set floating point exception control register (FPEXC) to enable VFPv2
-// FPEXC.EN [30] enables VFP: "The EN bit, FPEXC[30], is the VFP enable bit"
-// ARM1176 pp. 20-16
+
+@ set floating point exception control register (FPEXC) to enable VFPv2
+@ FPEXC.EN [30] enables VFP: "The EN bit, FPEXC[30], is the VFP enable bit"
+@ ARM1176 pp. 20-16
 mov r0, #(1 << 30)
 vmsr fpexc, r0
-// set the floating point status and control register (FPSCR) to a known state
-// RunFast: FZ [24] flushes tiny values to zero; DN [25] selects default NaNs.
-// ARM1176 p. 20-15. 
-// The robots pointed out above that whenever sin computation goes to Na enabling the
-// RunFast bits we don't have to manually handle exceptions regarding floating point nans.
+
+@ set the floating point status and control register (FPSCR) to a known state
+@ RunFast: FZ [24] flushes tiny values to zero; DN [25] selects default NaNs.
+@ ARM1176 p. 20-15. 
+@ The robots pointed out above that whenever sin computation goes to Na enabling the
+@ RunFast bits we don't have to manually handle exceptions regarding floating point nans.
 mov r0, #(3 << 24)
 vmsr fpscr, r0
 ```
