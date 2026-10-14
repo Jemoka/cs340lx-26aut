@@ -434,6 +434,12 @@ mov r0, #(3 << 24)
 vmsr fpscr, r0
 ```
 
+In addition, there's a complier flag that actually get floats to be generated, which you mayyy need(?) I have `-march=armv6zk`, `-mlittle-endian`, `-mfloat-abi=hard`, `-mfpu=vfp`, in my Rust target configs, and I have not ablated which ones are strictly needed:
+
+```c
+-mfpu=vfp -mfloat-abi=hard
+```
+
 ## Sin
 Hardcode pi, and do Taylor series... an example with iteration is given in [here](./docs/sine.c).
 
