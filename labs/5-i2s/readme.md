@@ -339,7 +339,7 @@ After setting up the IRQ mapping and enablement (remember to turn on IRQs at all
 Once the IRQ fires, you will have to set `INT` on the DMA `CS` register to clear it (as with others, its set to clear), and---optionally---turn off DMA when your Ringbuffer is fully played.
 
 > [!TIP]
-> How would you know which DMA block you are running? Relying on interrupt as a counter *does* work, but better yet is to match which block just finished. Specifically, the DMA channels has a `CONBLK_AD` register (pp50), which you can then use to match to one member of the block in your ringbuffer.
+> How would you know which DMA block you are running? Relying on interrupt as a counter *does* work, but better yet is to match which block just finished. Specifically, the DMA channels has a `CONBLK_AD` register (pp50), which you can then use to match to one member of the block in your ringbuffer by iterating through the entire list of control blocks you have.
 
 ### Oh crap, my IRQ isn't firing fast enough
 There's a good chance that even if you do this your interrupts won't fire fast enough for you to stop the DMA / update head fast enough. As such, you can leave a little bit of buffer for you to not hear the first frame of your song every time you try to stop.
@@ -368,6 +368,9 @@ self.blocks[self.write].tx_len = len(SILENCE)
 [^6]: [more like your buddy Linus](https://github.com/raspberrypi/linux/blob/rpi-6.6.y/arch/arm/boot/dts/broadcom/bcm2835-common.dtsi)
 
 At this point, look ma' no gaps! (hopefully)
+
+### But I don't want to do an interrupt
+Tianle suggested the above maybe a bit too hard to grok, fair! There's a register called `DMA_SRC_ADDR` which tells you where DMA is; you can feasibly have one giant buffer in which your head and tail are *addresses*. And then, during your run you can just check where DMA is every tick without interrupts and update tail accordingly before you write anything into head. This, is likely simpler(?), and both approaches are just fine!
 
 ### There's a race
 *Technically*, there's a data race in this design when the following things happen:
@@ -448,6 +451,8 @@ In addition, there's a complier flag that actually get floats to be generated, w
 ## Sin
 Hardcode pi, and do Taylor series... an example with iteration is given in [here](./docs/sine.c).
 
+**CUTE HACK**: instead of doing all the math, you can memoize a large table from the resolution of your choice (you put a finite number of things into the `sin` function anyways). This is faster.
+
 ## Sticking Floats into PCM32
 Our 32 bit PCM format uses a minimum and maximum integer value $\pm 2147483648$, where float formats are normalized between $\pm 1.0$. To transition between them, to no one's uprise, we just scale'em:
 
@@ -505,6 +510,15 @@ $$x[n] = \begin{cases} 1 & \text{if } p[n] < 0.5 \\ -1 & \text{otherwise} \end{c
 Duuuuu
 
 $$x[n] = \sin \left( 2\pi p[n] \right)$$
+
+----------------------------------------------------------------------
+## Checkoff
+
+1. tasks 1-7 implemented
+2. your thing continuously makes cool sound without gaps
+
+
+----------------------------------------------------------------------
 
 # Extensions
 - minor - Adders! Add two frequencies together.
