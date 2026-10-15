@@ -356,8 +356,8 @@ self.blocks[self.head].tx_len = len(INPUT)
 self.head = (self.head + 1) % BUFFER_COUNT;
 
 // write then in the block right after silence
-self.buffers[self.write].fill(SILENCE);
-self.blocks[self.write].tx_len = len(SILENCE)
+self.buffers[self.head].fill(SILENCE);
+self.blocks[self.head].tx_len = len(SILENCE)
 ```
 
 > [!TIP]
